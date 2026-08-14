@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Torre de Control · Simulador AM (VHF Aeronáutico)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <div class="scanlines"></div>
+
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-icon">◎</span>
+      <div>
+        <h1>TORRE DE CONTROL <span class="accent">/ AM·VHF</span></h1>
+        <p class="subtitle">Simulador de Modulación de Amplitud — Enlace Aire-Tierra </p>
+      </div>
+    </div>
+    <div class="status">
+      <span id="onair-led" class="led"></span>
+      <span id="onair-text">EN EL AIRE</span>
+    </div>
+  </header>
+
+  <main class="console">
+
+    <!-- PANEL DE CONTROL -->
+    <aside class="panel">
+      <h2 class="panel-title">01 · Parámetros de Enlace</h2>
+
+      <div class="control">
+        <label for="fm">Frecuencia de voz — f<sub>m</sub></label>
+        <div class="control-row">
+          <input type="range" id="fm" min="20" max="500" step="1" value="100">
+          <span class="readout" id="fm-val">100 Hz</span>
+        </div>
+      </div>
+
+      <div class="control">
+        <label for="fc">Portadora VHF (escalada) — f<sub>c</sub></label>
+        <div class="control-row">
+          <input type="range" id="fc" min="500" max="3000" step="10" value="1200">
+          <span class="readout" id="fc-val">1200 Hz</span>
+        </div>
+      </div>
+
+      <div class="control">
+        <label for="mu">Índice de modulación — μ</label>
+        <div class="control-row">
+          <input type="range" id="mu" min="0" max="2" step="0.01" value="0.5">
+          <span class="readout" id="mu-val">0.50</span>
+        </div>
+      </div>
+
+      <div class="control">
+        <label for="snr">Relación señal/ruido (AWGN) — SNR</label>
+        <div class="control-row">
+          <input type="range" id="snr" min="0" max="40" step="1" value="25">
+          <span class="readout" id="snr-val">25 dB</span>
+        </div>
+      </div>
+
+      <div id="overmod-alert" class="alert hidden">
+        ⚠ SOBREMODULACIÓN — μ &gt; 1 (distorsión / envolvente cruzada)
+      </div>
+
+      <div class="note">
+        <p><strong>Nota de escala:</strong> la banda aeronáutica real opera en 118–137 MHz.
+        Para simular en el navegador sin frecuencias de muestreo colosales, se usa un modelo
+        escalado (f<sub>m</sub> en decenas/cientos de Hz, f<sub>c</sub> en el orden de kHz),
+        preservando el comportamiento matemático de la modulación AM.</p>
+      </div>
+
+      <div class="tooltip">
+        <p>📡 Observe cómo al variar f<sub>c</sub>, todo el espectro de la señal de voz se
+        desplaza en el dominio de la frecuencia (<em>Traslación de Frecuencia</em>).</p>
+      </div>
+    </aside>
+
+    <!-- GRÁFICAS -->
+    <section class="scope-grid">
+      <div class="scope-card">
+        <h3><span class="idx">02</span> Dominio del Tiempo</h3>
+        <div id="plot-time" class="plot"></div>
+      </div>
+
+      <div class="scope-card">
+        <h3><span class="idx">03</span> Dominio de la Frecuencia — Espectro de Potencia</h3>
+        <div id="plot-freq" class="plot"></div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="footbar">
+    <span>fs = 10 000 Hz · N = 2048 muestras · FFT radix-2 leandro Acosta, Marlin Solano, Javier montero </span>
+  </footer>
+
+  <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+  <script src="js/math.js"></script>
+  <script src="js/charts.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
