@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Torre de Control · Simulador AM (VHF Aeronáutico)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <div class="scanlines"></div>
+
+  <!-- Este mensaje SOLO aparece en pantallas pequeñas (celular) -->
+  <div class="mobile-only-notice">
+    📱 Estás en pantalla pequeña: desliza hacia abajo para ver los controles y las gráficas.
+    Para grabar tu voz, el navegador te pedirá permiso de micrófono — acéptalo.
+    Recuerda: el sonido solo se reproducirá después de tocar un botón (los navegadores móviles
+    bloquean el audio automático).
+  </div>
+
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-icon">◎</span>
+      <div>
+        <h1>TORRE DE CONTROL <span class="accent">/ AM·VHF</span></h1>
+        <p class="subtitle">Simulador de Modulación de Amplitud — Enlace Aire-Tierra</p>
+      </div>
+    </div>
+    <div class="status">
+      <span id="onair-led" class="led"></span>
+      <span id="onair-text">EN EL AIRE</span>
+    </div>
+  </header>
+
+  <main class="console">
+
+    <!-- PANEL DE CONTROL -->
+    <aside class="panel">
+
+      <h2 class="panel-title">01 · Fuente del mensaje
+        <span class="spec-badge">f<sub>s</sub>=10 000 Hz · N=2048 · FFT radix-2</span>
+      </h2>
+
+      <!-- Pestañas para elegir el origen de la señal -->
+      <div class="tabs">
+        <button id="tab-tone" class="tab active">🎵 Tono de prueba</button>
+        <button id="tab-mic" class="tab">🎙️ Mi voz (micrófono)</button>
+      </div>
+
+      <!-- Controles del modo TONO -->
+      <div id="tone-controls">
+        <div class="control">
+          <label for="fm">Frecuencia del tono — f<sub>m</sub></label>
+          <div class="control-row">
+            <input type="range" id="fm" min="20" max="500" step="1" value="100">
+            <span class="readout" id="fm-val">100 Hz</span>
+          </div>
+        </div>
+
+        <div class="control">
+          <label for="harm">Armónicos del tono</label>
+          <div class="control-row">
+            <input type="range" id="harm" min="1" max="6" step="1" value="1">
+            <span class="readout" id="harm-val">Tono puro</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Controles del modo MICRÓFONO -->
+      <div id="mic-controls" class="hidden">
+        <div class="control">
+          <button id="btn-record" class="btn-record">● Grabar mi voz</button>
+          <p class="mic-status" id="mic-status">Sin grabación todavía (máx. 6 segundos).</p>
+          <div class="level-meter"><div class="level-fill" id="mic-level-fill"></div></div>
+        </div>
+      </div>
+
+      <h2 class="panel-title" style="margin-top:22px;">02 · Parámetros del canal</h2>
+
+      <div class="control">
+        <label for="fc">Portadora VHF (escalada) — f<sub>c</sub></label>
+        <div class="control-row">
+          <input type="range" id="fc" min="500" max="3000" step="10" value="1200">
+          <span class="readout" id="fc-val">1200 Hz</span>
+        </div>
+      </div>
+
+      <div class="control">
+        <label for="mu">Índice de modulación — μ</label>
+        <div class="control-row">
+          <input type="range" id="mu" min="0" max="2" step="0.01" value="0.5">
+          <span class="readout" id="mu-val">0.50</span>
+        </div>
+      </div>
+
+      <div class="control">
+        <label for="snr">Ruido del canal (AWGN) — SNR</label>
+        <div class="control-row">
+          <input type="range" id="snr" min="0" max="40" step="1" value="25">
+          <span class="readout" id="snr-val">25 dB</span>
+        </div>
+      </div>
+
+      <div id="overmod-alert" class="alert hidden">
+        ⚠ SOBREMODULACIÓN — μ &gt; 1. La señal se distorsiona y no se puede recuperar bien.
+      </div>
+
+      <h2 class="panel-title" style="margin-top:22px;">03 · Escuchar y comparar</h2>
+      <div class="playback-row">
+        <button id="btn-play-original" class="btn-play" disabled>▶ Original</button>
+        <button id="btn-play-modulated" class="btn-play" disabled>▶ Modulada</button>
+        <button id="btn-play-recovered" class="btn-play" disabled>▶ Recuperada</button>
+      </div>
+      <p class="note">Los tres botones usan siempre los parámetros actuales de los sliders, así que
+      la comparación es justa: el mismo audio, con la misma modulación que ves en las gráficas.</p>
+
+      <div class="note">
+        <p><strong>¿Qué significa cada control?</strong> f<sub>m</sub> es el tono que "habla";
+        f<sub>c</sub> es la frecuencia de radio sobre la que viaja ese tono (aquí usamos números
+        pequeños en vez de los 118–137 MHz reales, para que el navegador pueda calcularlo sin
+        problema); μ controla qué tan fuerte se "monta" el mensaje sobre la portadora — si pasa
+        de 1, la señal se deforma; SNR simula qué tan limpio o ruidoso está el canal de radio.</p>
+      </div>
+
+      <div class="note">
+        <p><strong>¿Qué son los armónicos?</strong> Ningún sonido real —ni tu voz, ni un
+        instrumento— es un tono puro. Es una nota principal (fundamental) acompañada de copias
+        más débiles a frecuencias múltiplos de esa nota: 2×, 3×, 4×... Esas copias son los
+        armónicos, y son los que le dan el "color" o timbre a cada voz. Por eso, cuando activas
+        armónicos en el tono de prueba, o cuando grabas tu voz real, el espectro modulado ya no
+        muestra solo dos bandas laterales: aparecen varias, una por cada armónico presente en el
+        mensaje.</p>
+      </div>
+
+      <div class="note">
+        <p><strong>¿Qué es la señal "Recuperada"?</strong> Es una simulación de lo que hace un
+        receptor de radio AM sencillo: extrae la envolvente de la señal modulada (como lo haría
+        un simple diodo) para reconstruir el mensaje original. Compararla con el audio original
+        te deja ver qué tan fiel es la transmisión — y cómo empeora si hay demasiado ruido o
+        sobremodulación.</p>
+      </div>
+
+      <div class="tooltip">
+        <p>📡 Observe cómo al variar f<sub>c</sub>, todo el espectro de la señal se desplaza en
+        el dominio de la frecuencia (<em>Traslación de Frecuencia</em>).</p>
+      </div>
+    </aside>
+
+    <!-- GRÁFICAS -->
+    <section class="scope-grid">
+      <div class="scope-card">
+        <h3><span class="idx">04</span> Dominio del Tiempo — Original vs. Modulada vs. Recuperada</h3>
+        <div id="plot-time" class="plot"></div>
+      </div>
+
+      <div class="scope-card">
+        <h3><span class="idx">05</span> Dominio de la Frecuencia — Espectro de Potencia</h3>
+        <div id="plot-freq" class="plot"></div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="footbar">
+    Marlin Solano &nbsp;·&nbsp; Leandro Acosta &nbsp;·&nbsp; Javier Montero
+  </footer>
+
+  <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+  <script src="js/math.js"></script>
+  <script src="js/audio.js"></script>
+  <script src="js/charts.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
