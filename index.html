@@ -62,9 +62,10 @@
         <div class="control">
           <label for="harm">Armónicos del tono</label>
           <div class="control-row">
-            <input type="range" id="harm" min="1" max="6" step="1" value="1">
+            <input type="range" id="harm" min="1" max="20" step="1" value="1">
             <span class="readout" id="harm-val">Tono puro</span>
           </div>
+          <p class="mini-note" id="harm-clip-note"></p>
         </div>
       </div>
 
@@ -128,10 +129,12 @@
         <p><strong>¿Qué son los armónicos?</strong> Ningún sonido real —ni tu voz, ni un
         instrumento— es un tono puro. Es una nota principal (fundamental) acompañada de copias
         más débiles a frecuencias múltiplos de esa nota: 2×, 3×, 4×... Esas copias son los
-        armónicos, y son los que le dan el "color" o timbre a cada voz. Por eso, cuando activas
-        armónicos en el tono de prueba, o cuando grabas tu voz real, el espectro modulado ya no
-        muestra solo dos bandas laterales: aparecen varias, una por cada armónico presente en el
-        mensaje.</p>
+        armónicos, y son los que le dan el "color" o timbre a cada voz. Al subir el slider de
+        armónicos, cada copia extra se suma con menor volumen (1/k), igual que en un sonido real,
+        y en el espectro modulado aparece un par de bandas nuevas por cada armónico. Como la
+        frecuencia de muestreo del simulador es limitada, los armónicos que superarían ese límite
+        se ignoran automáticamente para evitar que se "disfracen" de otra frecuencia (efecto
+        llamado aliasing) — si eso pasa, verás un aviso debajo del slider.</p>
       </div>
 
       <div class="note">
