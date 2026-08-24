@@ -1,5 +1,5 @@
-// audio.js — Captura de micrófono, remuestreo y reproducción de audio
-// (original / modulada / recuperada) usando la Web Audio API del navegador.
+// audio.js — Captura de micrófono, remuestreo, reproducción y detección del
+// tramo con voz real, usando la Web Audio API del navegador.
 //
 // IMPORTANTE: getUserMedia (acceso al micrófono) sólo funciona en un
 // contexto seguro: https:// o http://localhost. Si abres el archivo
@@ -101,3 +101,25 @@ const AudioEngine = (() => {
 
   return { startRecording, stopRecording, resample, playBuffer };
 })();
+
+// Detección simple de inicio de voz: recorre la señal y devuelve el primer
+// tramo de `segmentLength` muestras que empieza donde la energía supera un
+// umbral (con un pequeño margen hacia atrás para no cortar el ataque del
+// sonido). Evita que la gráfica muestre el silencio inicial de la grabación
+// en vez de la voz real. Si nunca se supera el umbral (grabación muy floja),
+// cae de vuelta al inicio del arreglo.
+function findVoiceSegment(signal, segmentLength, threshold = 0.12) {
+  const n = signal.length;
+  let start = 0;
+  let found = false;
+  for (let i = 0; i < n; i++) {
+    if (Math.abs(signal[i]) > threshold) {
+      start = Math.max(0, i - 100); // pequeño margen antes del ataque
+      found = true;
+      break;
+    }
+  }
+  if (!found) start = 0;
+  const end = Math.min(n, start + segmentLength);
+  return signal.slice(start, end);
+}
