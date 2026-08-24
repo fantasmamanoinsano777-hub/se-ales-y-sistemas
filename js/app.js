@@ -14,6 +14,7 @@ const els = {
 
   fmVal: document.getElementById('fm-val'),
   harmVal: document.getElementById('harm-val'),
+  harmClipNote: document.getElementById('harm-clip-note'),
   fcVal: document.getElementById('fc-val'),
   muVal: document.getElementById('mu-val'),
   snrVal: document.getElementById('snr-val'),
@@ -55,7 +56,6 @@ function render() {
   const snr = parseFloat(els.snr.value);
 
   els.fmVal.textContent = `${fm} Hz`;
-  els.harmVal.textContent = harm === 1 ? 'Tono puro' : `${harm} armónicos`;
   els.fcVal.textContent = `${fc} Hz`;
   els.muVal.textContent = mu.toFixed(2);
   els.snrVal.textContent = `${snr} dB`;
@@ -71,25 +71,32 @@ function render() {
 
   if (currentMode === 'tone') {
     const m = harmonicMessage(fm, harm, N, Fs);
+
+    // Aviso si Nyquist obligó a recortar armónicos pedidos por el usuario
+    els.harmVal.textContent = m.usedHarmonics === 1 ? 'Tono puro' : `${m.usedHarmonics} armónicos`;
+    els.harmClipNote.textContent = (m.usedHarmonics < harm)
+      ? `⚠ Se limitó a ${m.usedHarmonics} de ${harm} para evitar aliasing (Fs/2 = ${Fs / 2} Hz).`
+      : '';
+
     data = buildSignalPackage(m, Fs, fc, mu, snr);
     data.fm = fm;
 
-    // Buffers de 2 segundos para poder escuchar el tono con calma
     const longM = harmonicMessage(fm, harm, Fs * 2, Fs);
     fullModulated = modulate(longM, Fs, fc, mu, snr);
     fullRecovered = envelopeDetect(fullModulated, Fs, fc);
     enablePlayback(true);
 
   } else {
+    els.harmClipNote.textContent = '';
     if (!recordedMessage) {
       enablePlayback(false);
       return; // aún no hay grabación: no hay nada que graficar
     }
-    const snippet = recordedMessage.slice(0, Math.min(N, recordedMessage.length));
+
+    // Busca el tramo donde realmente empieza la voz, en vez del silencio inicial
+    const snippet = findVoiceSegment(recordedMessage, N);
     data = buildSignalPackage(snippet, Fs, fc, mu, snr);
 
-    // Recalcula el audio COMPLETO grabado con los parámetros actuales —
-    // esto es lo que permite comparar "en tiempo real" al mover los sliders.
     fullModulated = modulate(recordedMessage, Fs, fc, mu, snr);
     fullRecovered = envelopeDetect(fullModulated, Fs, fc);
     enablePlayback(true);
