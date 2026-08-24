@@ -4,7 +4,7 @@ const Fs = 10000;   // Frecuencia de muestreo de trabajo del simulador (Hz)
 const N  = 2048;    // Muestras usadas para graficar (potencia de 2, exigida por la FFT)
 const Ac = 1;       // Amplitud de la portadora (V)
 
-// --- FFT recursiva radix-2 (Cooley-Tukey), igual que en la versión anterior ---
+// --- FFT recursiva radix-2 (Cooley-Tukey) ---
 function fft(re, im) {
   const n = re.length;
   if (n <= 1) return;
@@ -39,23 +39,35 @@ function gaussianNoise() {
 /**
  * Genera un mensaje de prueba con armónicos:
  *   m(t) = Σ (1/k) · cos(2π · k·f_m · t),  k = 1 .. numHarmonics
- * Cada armónico (múltiplo de f_m) se suma con amplitud decreciente (1/k),
- * igual que ocurre con los armónicos de un sonido real. Con numHarmonics=1
- * se obtiene un tono puro (comportamiento idéntico a la versión anterior).
+ * Cada armónico se suma con amplitud decreciente (1/k), igual que en un sonido
+ * real. IMPORTANTE: si k·f_m alcanza o supera Fs/2 (límite de Nyquist), ese
+ * armónico y todos los siguientes se DESCARTAN — de lo contrario "se disfrazan"
+ * de una frecuencia distinta (aliasing) y arruinan la gráfica y el audio.
+ * Devuelve además cuántos armónicos realmente se usaron (usedHarmonics), para
+ * poder avisarle al usuario en la interfaz si se recortó algo.
  */
 function harmonicMessage(fm, numHarmonics, length = N, fs = Fs) {
+  const nyquist = fs / 2;
+  let usedHarmonics = numHarmonics;
+  for (let k = 1; k <= numHarmonics; k++) {
+    if (k * fm >= nyquist) { usedHarmonics = k - 1; break; }
+  }
+  usedHarmonics = Math.max(1, usedHarmonics); // siempre queda al menos la fundamental
+
   const m = new Float64Array(length);
   let maxAbs = 1e-9;
   for (let i = 0; i < length; i++) {
     const t = i / fs;
     let value = 0;
-    for (let k = 1; k <= numHarmonics; k++) {
+    for (let k = 1; k <= usedHarmonics; k++) {
       value += (1 / k) * Math.cos(2 * Math.PI * k * fm * t);
     }
     m[i] = value;
     if (Math.abs(value) > maxAbs) maxAbs = Math.abs(value);
   }
   for (let i = 0; i < length; i++) m[i] /= maxAbs; // normalizar a [-1, 1]
+
+  m.usedHarmonics = usedHarmonics; // metadato adjunto al arreglo, útil para la UI
   return m;
 }
 
@@ -100,15 +112,13 @@ function movingAverage(x, windowSize) {
 /**
  * Detector de envolvente: reconstruye (demodula) el mensaje a partir de s(t),
  * imitando el receptor AM más simple que existe (diodo rectificador + filtro
- * pasa-bajos). Sirve para comparar, de forma honesta, qué tanto sobrevive el
- * mensaje original después de todo el viaje (modulación + ruido + canal).
+ * pasa-bajos).
  */
 function envelopeDetect(s, fs, fc) {
   const n = s.length;
   const rectified = new Float64Array(n);
   for (let i = 0; i < n; i++) rectified[i] = Math.abs(s[i]);
 
-  // La ventana debe suavizar varios ciclos de la portadora sin borrar el mensaje
   const windowSize = Math.max(3, Math.round((3 * fs) / fc));
   const smoothed = movingAverage(rectified, windowSize);
 
@@ -130,7 +140,7 @@ function envelopeDetect(s, fs, fc) {
 function computeSpectrum(signal, fs) {
   const n = signal.length;
   let size = 1;
-  while (size < n) size *= 2; // la FFT exige potencia de 2
+  while (size < n) size *= 2;
 
   const re = new Float64Array(size);
   const im = new Float64Array(size);
